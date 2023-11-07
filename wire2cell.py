@@ -140,12 +140,12 @@ class Wire:
         return lResult
 
     def isEndPoint(self, x,y):
-        (xs,ys) = w.startPoint()
-        (xe,ye) = w.endPoint()
+        (xs,ys) = self.startPoint()
+        (xe,ye) = self.endPoint()
 
-        if x == xs and y == ys:
+        if (x == xs) and (y == ys):
             return True
-        if x == xe and y == ye:
+        if (x == xe) and (y == ye):
             return True
         return False
 
@@ -408,13 +408,14 @@ class Grid:
         #         result += " + delay"+ str(i)
         # result += ";\n\n"
 
-        result += "max: "
+        result += "min: "
+#        result += "max: "
         for i in range(len(lwire)):
             if i < len(lwireset[0].lWire):
                 result += " + delay"+ str(i)
             else:
                 result += " - delay"+ str(i)
-        result += ";\n\n"
+        result += " + ncell0;\n\n"
 
 #        result += "min: + ncell0 "
 #        for i in range(1, len(lwireset[1:])+1):
@@ -441,8 +442,11 @@ class Grid:
                         for c in self.get(x,y):
                             scells_on_wire.add(c)
                             sUsedGrid.add((x,y))
-            for c in scells_on_wire:
-                result += " + " + c
+            if len(scells_on_wire) == 0 :
+                result += " 0 "
+            else:
+                for c in scells_on_wire:
+                    result += " + " + c
             result += " = delay" + str(wireidx) + ";\n"
             wireidx+=1
 
@@ -816,7 +820,7 @@ lWcells.append( WCell("spll4c2",     [((-1,0),(0,1)),((-1,0),(1,0))], 1, 2) )
 lWcells.append( WCell("splljtlx",    [((-1,0),(1,-1)),((-1,0),(2,0)),((0,-1),(0,1))], 2, 1) )
 lWcells.append( WCell("splljtlx2",   [((-1,0),(1,-1)),((-1,0),(2,0)),((0,1),(0,-1))], 2, 1) )
 lWcells.append( WCell("splljtlx3",   [((-1,0),(0,-1)),((-1,0),(2,0)),((0,-1),(0,1))], 2, 1) )
-lWcells.append( WCell("splljtlx4",   [((-1,0),(0,-1)),((-1,0),(2,0)),((0,1),(0,-1))], 2, 1) )
+lWcells.append( WCell("splljtlx4",   [((-1,0),(0,-1)),((-1,0),(2,0)),((1,1),(1,-1))], 2, 1) )
 lWcells.append( WCell("splljtlx5",   [((0,1),(0,-1)),((0,1),(2,0)),((1,-1),(1,1))], 2, 1) )
 lWcells.append( WCell("splljtlx6",   [((0,1),(0,-1)),((0,1),(2,0)),((1,1),(1,-1))], 2, 1) )
 
