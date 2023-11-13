@@ -5,9 +5,13 @@ import sys
 class WireSet:
     def __init__(self, wireList):
         self.set(wireList)
+        self.dNT       = {}
+        self.dAdjacent = {}
 
     def set(self, wireList):
         self.lWire = []
+        self.dNT       = {}
+        self.dAdjacent = {}
         for elem in wireList:
             self.lWire.append(elem)
 
@@ -73,16 +77,28 @@ class WireSet:
 
     # count the number of paths within (x,y) (x+size_x, y+size_y)
     def countNumThrough(self, x,y, size_x, size_y):
+        # check the cache at first
+        if (x,y,size_x,size_y) in self.dNT:
+            return self.dNT[(x,y,size_x,size_y)]
+        # if missed, count the number
         result = []
         for w in self.lWire:
             result += w.countNumThroughList(x,y, size_x, size_y)
-        return len( set(result) )
-
+        if len(result) <= 1:
+            tmp = len(result)
+        else:
+            tmp = len( set(result) )
+        self.dNT[(x,y,size_x,size_y)] = tmp
+        return tmp
 
     def isAdjacent(self, xs,ys, xd,yd):
+        if (xs,ys, xd,yd) in self.dAdjacent:
+            return self.dAdjacent[(xs,ys, xd,yd)]
         for w in self.lWire:
             if w.isAdjacent(xs,ys, xd,yd):
+                self.dAdjacent[(xs,ys, xd,yd)] = True
                 return True
+        self.dAdjacent[(xs,ys, xd,yd)] = False
         return False
 
 
@@ -95,17 +111,33 @@ class Wire:
 
     def __init__(self):
         self.lCorner = []
+        self.dDistance  = {}
+        self.dDistanceL = {}
+        self.dNThrough  = {}
+        self.dAdjacent  = {}
 
     def __init__(self, cornerList):
         self.set(cornerList)
+        self.dDistance  = {}
+        self.dDistanceL = {}
+        self.dNThrough  = {}
+        self.dAdjacent  = {}
 
     def set(self, cornerList):
+        self.dDistance  = {}
+        self.dDistanceL = {}
+        self.dNThrough  = {}
+        self.dAdjacent  = {}
         self.lCorner = []
         for elem in cornerList:
             self.lCorner.append(elem)
 
-    def appendCoener(self, posx, posy):
+    def appendCorner(self, posx, posy):
         self.lCorner.append( (posx, posy) )
+        self.dDistance  = {}
+        self.dDistanceL = {}
+        self.dNThrough  = {}
+        self.dAdjacent  = {}
     
     def startPoint(self):
         return self.lCorner[0]
@@ -176,22 +208,33 @@ class Wire:
         return result
 
     def getDistanceFromSource(self, x,y):
+        # check the cache at first
+        if (x,y) in self.dDistance:
+            return self.dDistance[(x,y)]
         result = 0
         prevCorner = self.lCorner[0]
         for e in self.lCorner[1:]:
             if (x == e[0] and x == prevCorner[0] and 
                 min(e[1], prevCorner[1]) <= y and
                 max(e[1], prevCorner[1]) >= y):
-                return result + abs(y - prevCorner[1])
+                result += abs(y - prevCorner[1])
+                self.dDistance[(x,y)] = result
+                return result
             if (y == e[1] and y == prevCorner[1] and 
                 min(e[0], prevCorner[0]) <= x and
                 max(e[0], prevCorner[0]) >= x):
-                return result + abs(x - prevCorner[0])
+                result += abs(x - prevCorner[0])
+                self.dDistance[(x,y)] = result
+                return result
             result += abs(prevCorner[1]-e[1]) + abs(prevCorner[0]-e[0])
             prevCorner = e
+        self.dDistance[(x,y)] = -1
         return -1
 
     def getDistanceListFromSource(self, x,y):
+        # check the cache at first
+        if (x,y) in self.dDistanceL:
+            return list(self.dDistanceL[(x,y)])
         result = set()
         curDist = 0
         prevCorner = self.lCorner[0]
@@ -206,16 +249,23 @@ class Wire:
                 result.add( curDist + abs(x - prevCorner[0]) )
             curDist += abs(prevCorner[1]-e[1]) + abs(prevCorner[0]-e[0])
             prevCorner = e
+        self.dDistanceL[(x,y)] = result
         return list(result)
 
     def isAdjacent(self, xs,ys, xd,yd):
+        if (xs,ys, xd,yd) in self.dAdjacent:
+            return self.dAdjacent[(xs,ys, xd,yd)]
+
         lDist_s = self.getDistanceListFromSource(xs, ys)
         lDist_d = self.getDistanceListFromSource(xd, yd)
         if len(lDist_s) == 0 or len(lDist_d) == 0:
+            self.dAdjacent[(xs,ys, xd,yd)] = False
             return False
         for ds in lDist_s:
             if ds+1 in lDist_d:
+                self.dAdjacent[(xs,ys, xd,yd)] = True
                 return True
+        self.dAdjacent[(xs,ys, xd,yd)] = False
         return False
 
     def checkDistance(self, xs,ys, xd,yd, distance):
@@ -229,6 +279,8 @@ class Wire:
         return False
 
     def countNumThrough(self, x,y, size_x, size_y):
+        if (x,y,size_x,size_y) in self.dNThrough:
+            return self.dNThrough[(x,y,size_x,size_y)]
         result = 0
         insideMod = False
         prevCorner = self.lCorner[0]
@@ -268,6 +320,7 @@ class Wire:
                                 result += 1
                             insideMod = False
             prevCorner = e
+        self.dNThrough[(x,y,size_x,size_y)] = result
         return result
 
     def countNumThroughList(self, x,y, size_x, size_y):
@@ -502,12 +555,12 @@ class WCell:
     def get_string_xy(self, x, y):
         return self.cell_name + "_" + str(x) + "_" + str(y)
 
-    def mark_placeable_possition(self, grid, lWireSet):
+    def mark_placeable_possition(self, grid, lWireSet, dNumCache, dListCache):
         gridsize = grid.get_size()
 
         for x in range( gridsize[0] ):
             for y in range( gridsize[1] ):
-                flip_rot = self.is_placeable_at(lWireSet, x,y)
+                flip_rot = self.is_placeable_at(lWireSet, x,y, dNumCache, dListCache)
                 if len(flip_rot) == 0:
                     continue
                 
@@ -550,42 +603,67 @@ class WCell:
                                 (out_pos[0], (self.size_y-1 - out_pos[1]))))
         self.linout = new_linout
 
-    def is_placeable_at(self, lWireSet, x, y):
+    def is_placeable_at(self, lWireSet, x, y, dNumCache, dListCache):
+
+        nLinout = len(self.linout)
+
+        if (x,y, self.size_x, self.size_y) in dNumCache and (x,y, self.size_y, self.size_x) in dNumCache:
+            npath1 = dNumCache[(x,y, self.size_x, self.size_y)]
+            npath2 = dNumCache[(x,y, self.size_y, self.size_x)]
+        else:
+            npath1 = 0
+            npath2 = 0
+            for ws in lWireSet:
+                npath1 += ws.countNumThrough(x,y, self.size_x, self.size_y)
+                npath2 += ws.countNumThrough(x,y, self.size_y, self.size_x)
+            dNumCache[(x,y, self.size_x, self.size_y)] = npath1
+            dNumCache[(x,y, self.size_y, self.size_x)] = npath2
+
+        if (npath1 != nLinout) and (npath2 != nLinout):
+            return ()
+
         cop = self.copy()
-        if( cop.is_placeable_with_currentPos(lWireSet, x, y) ):
+        if( npath1==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
             return (False, 0)
         cop.rot()
-        if( cop.is_placeable_with_currentPos(lWireSet, x, y) ):
+        if( npath2==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
             return (False, 1)
         cop.rot()
-        if( cop.is_placeable_with_currentPos(lWireSet, x, y) ):
+        if( npath1==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
             return (False, 2)
         cop.rot()
-        if( cop.is_placeable_with_currentPos(lWireSet, x, y) ):
+        if( npath2==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
             return (False, 3)
         cop = self.copy()
         cop.flip()
-        if( cop.is_placeable_with_currentPos(lWireSet, x, y) ):
+        if( npath1==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
             return (True, 0)
         cop.rot()
-        if( cop.is_placeable_with_currentPos(lWireSet, x, y) ):
+        if( npath2==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
             return (True, 1)
         cop.rot()
-        if( cop.is_placeable_with_currentPos(lWireSet, x, y) ):
+        if( npath1==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
             return (True, 2)
         cop.rot()
-        if( cop.is_placeable_with_currentPos(lWireSet, x, y) ):
+        if( npath2==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
             return (True, 3)
         return ()
 
-    def is_placeable_with_currentPos(self, lWireSet, x, y):
+    def is_placeable_with_currentPos(self, lWireSet, x, y, dNumCache, dListCache):
         lWireSetOnCell = []
-        npath = 0
-        for ws in lWireSet:
-            pnum = ws.countNumThrough(x,y, self.size_x, self.size_y)
-            if pnum != 0:
-                lWireSetOnCell.append(ws)
-                npath += pnum
+
+        if (x,y, self.size_x, self.size_y) in dNumCache and (x,y, self.size_x, self.size_y) in dListCache:
+            npath          = dNumCache [(x,y, self.size_x, self.size_y)]
+            lWireSetOnCell = dListCache[(x,y, self.size_x, self.size_y)]
+        else:
+            npath = 0
+            for ws in lWireSet:
+                pnum = ws.countNumThrough(x,y, self.size_x, self.size_y)
+                if pnum != 0:
+                    lWireSetOnCell.append(ws)
+                    npath += pnum
+            dNumCache [(x,y, self.size_x, self.size_y)] = npath
+            dListCache[(x,y, self.size_x, self.size_y)] = lWireSetOnCell
 
         if npath != len(self.linout):
             return False
@@ -602,6 +680,7 @@ class WCell:
             trim_out_x = min(self.size_x-1, max(out_x,0))
             trim_out_y = min(self.size_y-1, max(out_y,0))
 
+            foundWire = False
             for ws in lWireSetOnCell:
                 if (ws.isAdjacent(x+ in_x, y+ in_y, x+ trim_in_x, y+ trim_in_y) and
                     ws.isAdjacent(x+trim_out_x, y+trim_out_y, x+out_x, y+out_y) and
@@ -613,7 +692,10 @@ class WCell:
                         abs(trim_in_x-trim_out_x) + abs(trim_in_y-trim_out_y))
                     ):
                         matchCount+=1
+                        foundWire = True
                         break
+            if foundWire == False:
+                return False
         if matchCount == len(self.linout) :
             return True
 
@@ -878,8 +960,10 @@ grid.print()
 grid2 = Grid(max_x+1,max_y+1)
 grid2.set_emptylist()
 
+dNumCache  = {}
+dListCache = {}
 for wc in lWcells:
-    wc.mark_placeable_possition(grid2, lWireSet)
+    wc.mark_placeable_possition(grid2, lWireSet, dNumCache, dListCache)
 
 grid2.print()
 print("Placed : {}".format(grid2.isWirePlaced( lWireSet )))
