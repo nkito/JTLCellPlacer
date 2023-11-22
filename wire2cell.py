@@ -380,14 +380,6 @@ class Wire:
                             insideMod = False
             prevCorner = e
         return result
-    def checkWireDirection(self, src_x, src_y, dest_x, dest_y):
-
-        cx = self.lCorner[0][0]
-        cy = self.lCorner[0][1]
-        for c in self.lCorner:
-            new_cx = c[0]
-            new_cy = c[1]
-
 
 
 class Grid:
@@ -406,7 +398,7 @@ class Grid:
         return self.llGrid[x][y]
 
     def set_emptylist(self):
-        size = self.get_size()
+        size = self.getSize()
         for x in range(size[0]):
             for y in range(size[1]):
                 self.llGrid[x][y] = []
@@ -414,17 +406,17 @@ class Grid:
     def set(self, x, y, val):
         self.llGrid[x][y] = val
 
-    def get_size(self):
+    def getSize(self):
         return (len(self.llGrid), len(self.llGrid[0]))
 
-    def get_sizeX(self):
+    def getSizeX(self):
         return len(self.llGrid)
 
-    def get_sizeY(self):
+    def getSizeY(self):
         return len(self.llGrid[0])
 
     def print(self):
-        sSize = self.get_size()
+        sSize = self.getSize()
         for y in range(sSize[1]):
             for x in range(sSize[0]):
                 print(str(self.get(x,y)), end='')
@@ -432,7 +424,7 @@ class Grid:
         print("")
 
     def isWirePlaced(self, lwireset):
-        gridsize = self.get_size()
+        gridsize = self.getSize()
 
         for x in range( gridsize[0] ):
             for y in range( gridsize[1] ):
@@ -444,7 +436,7 @@ class Grid:
         return True
 
     def genILP(self, lwire, lwireset):
-        gridsize = self.get_size()
+        gridsize = self.getSize()
         result = ""
         svar = set()
 
@@ -465,10 +457,13 @@ class Grid:
 #        result += "max: "
         for i in range(len(lwire)):
             if i < len(lwireset[0].lWire):
+                # total delay (# cells in this program) of clock lines
+                # lwireset[0] is assumed as a clock distribution
                 result += " + delay"+ str(i)
             else:
+                # total delay (# cells in this program) of data lines
                 result += " - delay"+ str(i)
-        result += " + ncell0;\n\n"
+        result += ";\n\n"
 
 #        result += "min: + ncell0 "
 #        for i in range(1, len(lwireset[1:])+1):
@@ -484,6 +479,7 @@ class Grid:
 
         sUsedGrid = set()
 
+        # delay_x is delay time from a splitting point
         wireidx = 0
         for w in lwire:
             scells_on_wire = set()
@@ -503,6 +499,7 @@ class Grid:
             result += " = delay" + str(wireidx) + ";\n"
             wireidx+=1
 
+        # ncell_x is #cell for a net 
         wireidx = 0
         for ws in lwireset:
             scells_on_wire = set()
@@ -552,15 +549,15 @@ class WCell:
         
         return WCell(self.cell_name, copy_linout, self.size_x, self.size_y)
 
-    def get_string_xy(self, x, y):
+    def getStringWithPosition(self, x, y):
         return self.cell_name + "_" + str(x) + "_" + str(y)
 
-    def mark_placeable_possition(self, grid, lWireSet, dNumCache, dListCache):
-        gridsize = grid.get_size()
+    def markPlaceablePossitions(self, grid, lWireSet, dNumCache, dListCache):
+        gridsize = grid.getSize()
 
         for x in range( gridsize[0] ):
             for y in range( gridsize[1] ):
-                flip_rot = self.is_placeable_at(lWireSet, x,y, dNumCache, dListCache)
+                flip_rot = self.isPlaceableAt(lWireSet, x,y, dNumCache, dListCache)
                 if len(flip_rot) == 0:
                     continue
                 
@@ -570,7 +567,7 @@ class WCell:
                 else:
                     sx = self.size_y
                     sy = self.size_x
-                name = self.get_string_xy(x,y)+"_"+str(flip_rot[0])+"_"+str(flip_rot[1])
+                name = self.getStringWithPosition(x,y)+"_"+str(flip_rot[0])+"_"+str(flip_rot[1])
                 for gx in range(sx):
                     for gy in range(sy):
                         grid.get(x+gx,y+gy).append( name )
@@ -603,7 +600,7 @@ class WCell:
                                 (out_pos[0], (self.size_y-1 - out_pos[1]))))
         self.linout = new_linout
 
-    def is_placeable_at(self, lWireSet, x, y, dNumCache, dListCache):
+    def isPlaceableAt(self, lWireSet, x, y, dNumCache, dListCache):
 
         nLinout = len(self.linout)
 
@@ -623,33 +620,33 @@ class WCell:
             return ()
 
         cop = self.copy()
-        if( npath1==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
+        if( npath1==nLinout and cop.isPlaceableWithCurrentForm(lWireSet, x, y, dNumCache, dListCache) ):
             return (False, 0)
         cop.rot()
-        if( npath2==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
+        if( npath2==nLinout and cop.isPlaceableWithCurrentForm(lWireSet, x, y, dNumCache, dListCache) ):
             return (False, 1)
         cop.rot()
-        if( npath1==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
+        if( npath1==nLinout and cop.isPlaceableWithCurrentForm(lWireSet, x, y, dNumCache, dListCache) ):
             return (False, 2)
         cop.rot()
-        if( npath2==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
+        if( npath2==nLinout and cop.isPlaceableWithCurrentForm(lWireSet, x, y, dNumCache, dListCache) ):
             return (False, 3)
         cop = self.copy()
         cop.flip()
-        if( npath1==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
+        if( npath1==nLinout and cop.isPlaceableWithCurrentForm(lWireSet, x, y, dNumCache, dListCache) ):
             return (True, 0)
         cop.rot()
-        if( npath2==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
+        if( npath2==nLinout and cop.isPlaceableWithCurrentForm(lWireSet, x, y, dNumCache, dListCache) ):
             return (True, 1)
         cop.rot()
-        if( npath1==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
+        if( npath1==nLinout and cop.isPlaceableWithCurrentForm(lWireSet, x, y, dNumCache, dListCache) ):
             return (True, 2)
         cop.rot()
-        if( npath2==nLinout and cop.is_placeable_with_currentPos(lWireSet, x, y, dNumCache, dListCache) ):
+        if( npath2==nLinout and cop.isPlaceableWithCurrentForm(lWireSet, x, y, dNumCache, dListCache) ):
             return (True, 3)
         return ()
 
-    def is_placeable_with_currentPos(self, lWireSet, x, y, dNumCache, dListCache):
+    def isPlaceableWithCurrentForm(self, lWireSet, x, y, dNumCache, dListCache):
         lWireSetOnCell = []
 
         if (x,y, self.size_x, self.size_y) in dNumCache and (x,y, self.size_x, self.size_y) in dListCache:
@@ -954,20 +951,16 @@ for y in range(max_y,-1,-1):
     print("")
 
 grid = Grid(max_x+1,max_y+1)
-grid.set(2,3, Grid.GRID_IN_USE)
-grid.print()
-
-grid2 = Grid(max_x+1,max_y+1)
-grid2.set_emptylist()
+grid.set_emptylist()
 
 dNumCache  = {}
 dListCache = {}
 for wc in lWcells:
-    wc.mark_placeable_possition(grid2, lWireSet, dNumCache, dListCache)
+    wc.markPlaceablePossitions(grid, lWireSet, dNumCache, dListCache)
 
-grid2.print()
-print("Placed : {}".format(grid2.isWirePlaced( lWireSet )))
+grid.print()
+print("Placed : {}".format(grid.isWirePlaced( lWireSet )))
 
 print("======== CUT HERE ========")
-print(grid2.genILP( lWire, lWireSet ))
+print(grid.genILP( lWire, lWireSet ))
 
