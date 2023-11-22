@@ -132,13 +132,6 @@ class Wire:
         for elem in cornerList:
             self.lCorner.append(elem)
 
-    def appendCorner(self, posx, posy):
-        self.lCorner.append( (posx, posy) )
-        self.dDistance  = {}
-        self.dDistanceL = {}
-        self.dNThrough  = {}
-        self.dAdjacent  = {}
-    
     def startPoint(self):
         return self.lCorner[0]
     
