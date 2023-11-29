@@ -1,7 +1,6 @@
 # JTLCellPlacer
 
-under construction.
-
+A tool for tiling JTL cells according to given information.
 A PDF manual for the tool is available. Please contact me.
 
 ## Usage
@@ -11,6 +10,7 @@ Sample code "example.route" considers following JTLs.
 
 ![sample code](Example.png)
 
+Following command converts the sample code into an formulated problem in LP format.
 ```
 $ ./genlp.sh example.route
 ```
